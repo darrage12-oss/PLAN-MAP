@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Map Tools - Cartographie</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css?v=10" />
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="topbar-left">
+      <label class="checkbox-label"><input type="checkbox" id="chk-altitude" checked /> Altitude</label>
+      <label class="checkbox-label" title="Afficher ou masquer les coordonnées X/Y de TOUS les supports sur la carte (Map)"><input type="checkbox" id="chk-coords-map" /> Tous Map</label>
+      <label class="checkbox-label" title="Activer ou désactiver l'export des coordonnées X/Y de TOUS les supports dans le fichier DXF"><input type="checkbox" id="chk-coords-dxf" /> Tous DXF</label>
+      <label class="checkbox-label" title="Activer ou désactiver les coordonnées X/Y de TOUS les supports à la fois sur la carte (Map) et dans le DXF"><input type="checkbox" id="chk-coords-both" /> Tout (Map+DXF)</label>
+      <label class="checkbox-label" title="Cocher pour afficher le type (PBA ou Acier) dans le nom des supports (ex: PBA MT 1 au lieu de MT 1)"><input type="checkbox" id="chk-show-pole-type" /> Afficher PBA/Acier</label>
+    </div>
+    <div class="topbar-center">
+      <div id="search-container">
+        <i class="fa fa-globe"></i>
+        <input type="text" id="search-input" placeholder="Indiquez un lieu..." />
+        <button id="btn-search" title="Rechercher"><i class="fa fa-search"></i></button>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="label-text">Unite de l angle :</span>
+      <label class="radio-label"><input type="radio" name="angle-unit" value="deg" checked /> Degre</label>
+      <label class="radio-label"><input type="radio" name="angle-unit" value="rad" /> Radian</label>
+    </div>
+  </div>
+
+  <!-- NAV BAR -->
+  <div id="navbar">
+    <div class="navbar-left">
+      <button class="nav-btn" id="btn-goto">Aller a :</button>
+      <label class="coord-label">X =
+        <input type="text" id="input-x" class="coord-input" placeholder="0.000000" />
+        <span class="coord-unit" id="unit-x">m</span>
+      </label>
+      <label class="coord-label">Y =
+        <input type="text" id="input-y" class="coord-input" placeholder="0.000000" />
+        <span class="coord-unit" id="unit-y">m</span>
+      </label>
+      <button class="nav-btn secondary" id="btn-example">Example</button>
+    </div>
+    <div class="navbar-right">
+      <label class="import-btn" title="Importer un fichier">
+        <i class="fa fa-folder-open"></i>
+        Import DAT(CadGis), TXT, DXF, KML, KMZ, GPX, CSV
+        <input type="file" id="file-import" accept=".kml,.kmz,.dxf,.txt,.gpx,.csv,.dat" multiple />
+      </label>
+    </div>
+  </div>
+
+  <!-- SELECTOR BAR -->
+  <div id="selectorbar">
+    <select id="sel-maptype" title="Type de carte">
+      <option value="satellite" selected>Satellite HD (Esri)</option>
+      <option value="satellite2">Google Satellite</option>
+      <option value="hybrid">Google Hybrid</option>
+      <option value="osm">OpenStreetMap</option>
+      <option value="topo">Topo OSM</option>
+      <option value="dark">Dark Mode</option>
+    </select>
+    <select id="sel-country" title="Pays">
+      <option value="MA" selected>Maroc</option>
+      <option value="DZ">Algerie</option>
+      <option value="TN">Tunisie</option>
+      <option value="FR">France</option>
+      <option value="ES">Espagne</option>
+      <option value="MR">Mauritanie</option>
+      <option value="SN">Senegal</option>
+      <option value="LY">Libye</option>
+    </select>
+    <select id="sel-projection" title="Systeme de projection">
+      <optgroup label="Lambert Maroc">
+        <option value="EPSG:26191" selected>Lambert Zone I (Nord Maroc)</option>
+        <option value="EPSG:26192">Lambert Zone II (Sud Maroc)</option>
+        <option value="EPSG:26194">Lambert Zone III</option>
+        <option value="EPSG:26195">Lambert Zone IV</option>
+      </optgroup>
+      <optgroup label="France">
+        <option value="EPSG:2154">Lambert 93 (France)</option>
+        <option value="EPSG:27572">Lambert II Étendu (France)</option>
+      </optgroup>
+      <optgroup label="UTM & Universel">
+        <option value="EPSG:4326">WGS84 (Lat/Lon)</option>
+        <option value="EPSG:32628">UTM Zone 28N</option>
+        <option value="EPSG:32629">UTM Zone 29N</option>
+        <option value="EPSG:32630">UTM Zone 30N</option>
+        <option value="EPSG:32631">UTM Zone 31N</option>
+        <option value="EPSG:32632">UTM Zone 32N</option>
+        <option value="EPSG:32633">UTM Zone 33N</option>
+        <option value="EPSG:3857">Web Mercator</option>
+      </optgroup>
+    </select>
+    <div id="cursor-coords">
+      <i class="fa fa-crosshairs"></i>
+      <span id="coord-display">X: -- &nbsp; Y: --</span>
+    </div>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div id="main-layout">
+    <div id="view-toggle">
+      <button class="view-btn active" data-view="plan">Plan</button>
+      <button class="view-btn" data-view="satellite">Satellite</button>
+      <button class="view-btn" id="btn-toggle-points-sidebar" title="Afficher ou masquer la liste des points">
+        <i class="fa fa-list"></i> Points <span id="points-count-badge" style="background:#27ae60;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;display:none;">0</span>
+      </button>
+      <button class="view-btn" id="btn-rotate-left" title="Tourner la carte à gauche (⟲ 45°)"><i class="fa fa-undo"></i> ⟲</button>
+      <button class="view-btn" id="btn-rotate-right" title="Tourner la carte à droite (⟳ 45°)"><i class="fa fa-redo"></i> ⟳</button>
+      <button class="view-btn" id="btn-rotate-reset" title="Réinitialiser au Nord (0°)" style="font-weight:bold;color:#e74c3c;"><i class="fa fa-compass"></i> Nord</button>
+      <div class="dxf-quick-bar" title="Options pour l'export AutoCAD (Nom du support, X=, Y=)">
+        <span class="dxf-quick-label"><i class="fa fa-file-invoice"></i> DXF:</span>
+        <select id="top-dxf-font" class="dxf-quick-select" title="Police d'export (Nom, X, Y)">
+          <option value="calibri.ttf" selected>Calibri</option>
+          <option value="arial.ttf">Arial</option>
+          <option value="times.ttf">Times New Roman</option>
+          <option value="tahoma.ttf">Tahoma</option>
+          <option value="simplex.shx">Simplex</option>
+          <option value="txt.shx">Standard (txt)</option>
+        </select>
+        <select id="top-dxf-size" class="dxf-quick-select" title="Taille du texte (Nom, X, Y) entre 1 et 10 m">
+          <option value="1">1.0 m</option>
+          <option value="1.5">1.5 m</option>
+          <option value="2">2.0 m</option>
+          <option value="2.5">2.5 m</option>
+          <option value="3">3.0 m</option>
+          <option value="3.5" selected>3.5 m</option>
+          <option value="4">4.0 m</option>
+          <option value="4.5">4.5 m</option>
+          <option value="5">5.0 m</option>
+          <option value="6">6.0 m</option>
+          <option value="7">7.0 m</option>
+          <option value="8">8.0 m</option>
+          <option value="9">9.0 m</option>
+          <option value="10">10.0 m</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- LEFT SIDEBAR FOR IMPORTED POINTS -->
+    <div id="left-sidebar" style="display: none;">
+      <div class="sidebar-header">
+        <h4><i class="fa fa-map-pin"></i> Supports / Points (<span id="sidebar-count">0</span>)</h4>
+        <button id="close-left-sidebar" title="Masquer"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="sidebar-actions-row">
+        <button id="btn-add-pba-sidebar" class="sidebar-action-btn pba-btn" title="Ajouter un support PBA sur la carte">
+          <i class="fa fa-plus"></i> ■ PBA
+        </button>
+        <button id="btn-add-acier-sidebar" class="sidebar-action-btn acier-btn" title="Ajouter un support Acier sur la carte">
+          <i class="fa fa-plus"></i> ● Acier
+        </button>
+      </div>
+      <div class="sidebar-search-row" style="padding: 6px 10px; background: #fff; border-bottom: 1px solid #e2e8f0;">
+        <input type="text" id="filter-points-input" placeholder="🔍 Filtrer les supports (nom, N°)..." style="width: 100%; padding: 4px 8px; font-size: 11.5px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;" />
+      </div>
+      <!-- SELECTION BATCH COORDONNEES TOUS MAP / TOUS DXF / TOUT -->
+      <div class="sidebar-batch-coords-row" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:11px;font-weight:700;">
+        <span style="color:#334155;display:flex;align-items:center;gap:4px;">
+          <i class="fa fa-layer-group" style="color:#0284c7;"></i> Coords :
+        </span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#0284c7;user-select:none;margin:0;" title="Tout cocher / décocher pour afficher les coordonnées sur la CARTE">
+            <input type="checkbox" id="chk-select-all-map" style="cursor:pointer;" />
+            <span>Map</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#16a34a;user-select:none;margin:0;" title="Tout cocher / décocher pour exporter les coordonnées dans le fichier DXF">
+            <input type="checkbox" id="chk-select-all-dxf" style="cursor:pointer;" />
+            <span>DXF</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;color:#9333ea;user-select:none;margin:0;" title="Tout cocher / décocher à la fois pour Map et DXF">
+            <input type="checkbox" id="chk-select-all-both" style="cursor:pointer;" />
+            <span><b>Tout</b></span>
+          </label>
+        </div>
+      </div>
+      <div id="points-list"></div>
+      <button id="btn-export-points-csv" class="action-btn"><i class="fa fa-file-excel"></i> Exporter CSV (Excel)</button>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- HUD MESURE EN DIRECT LORS DU TRACÉ (LIVE DISTANCE) -->
+    <div id="live-measure-hud" class="live-measure-hud hidden">
+      <span class="hud-icon">⚡</span>
+      <span id="hud-network-type" class="hud-type-badge">BT</span>
+      <span class="hud-sep">|</span>
+      <span class="hud-label">Portée live :</span>
+      <span id="hud-live-dist" class="hud-val">0.0 m</span>
+      <span class="hud-sep">|</span>
+      <span class="hud-label">Total :</span>
+      <span id="hud-total-dist" class="hud-val">0.0 m</span>
+      <span class="hud-sep">|</span>
+      <span class="hud-label">Poteaux :</span>
+      <span id="hud-poles-count" class="hud-val">0</span>
+      <span class="hud-tip">[Double-clic pour valider • Echap pour quitter]</span>
+    </div>
+
+    <!-- RIGHT TOOLBAR -->
+    <div id="right-toolbar">
+      <div class="toolbar-section">
+        <button class="tool-btn" id="tool-expand" title="Plein ecran"><i class="fa fa-expand"></i></button>
+      </div>
+
+      <!-- DRAW SECTION LABEL -->
+      <div class="toolbar-label">DESSIN</div>
+
+      <!-- SUPPORTS ELECTRIQUES (PBA / ACIER) -->
+      <div class="toolbar-section">
+        <button class="tool-btn tool-pba" id="tool-pba" title="Ajouter un support PBA (Béton Armé - Carré Noir)">
+          <i class="fa fa-square"></i>
+          <span class="btn-badge">■ PBA</span>
+        </button>
+        <button class="tool-btn tool-acier" id="tool-acier" title="Ajouter un support Acier (Cercle Noir)">
+          <i class="fa fa-circle"></i>
+          <span class="btn-badge">● Acier</span>
+        </button>
+      </div>
+
+      <!-- POINTS / SURFACES -->
+      <div class="toolbar-section">
+        <button class="tool-btn tool-foyer" id="tool-foyer" title="Tracer la limite d'un foyer tout seul (Polygone ferme)">
+          <i class="fa fa-home"></i>
+          <span class="btn-badge">Foyer</span>
+        </button>
+        <button class="tool-btn tool-coord" id="tool-coord" title="Placer les coordonnees X/Y et le nom a l'emplacement de votre choix">
+          <i class="fa fa-crosshairs"></i>
+          <span class="btn-badge">Coord X/Y</span>
+        </button>
+      </div>
+
+      <!-- LINES -->
+      <div class="toolbar-section">
+        <button class="tool-btn tool-piste" id="tool-piste" title="Dessiner une piste (trait orange pointille)">
+          <i class="fa fa-person-hiking"></i>
+          <span class="btn-badge">Piste</span>
+        </button>
+        <button class="tool-btn tool-route" id="tool-route" title="Dessiner une route (trait vert plein)">
+          <i class="fa fa-road"></i>
+          <span class="btn-badge">Route</span>
+        </button>
+        <button class="tool-btn tool-line" id="tool-line" title="Dessiner une ligne generique">
+          <i class="fa fa-pen"></i>
+          <span class="btn-badge">Ligne</span>
+        </button>
+      </div>
+
+      <!-- ELECTRICAL NETWORKS (BT / MT / MIXTE) -->
+      <div class="toolbar-label">RÉSEAU ÉLEC</div>
+      <div class="toolbar-section">
+        <button class="tool-btn active tool-network-auto" id="tool-network-auto" title="Option Tracé Réseau : Carré de Poteau PBA et Distances automatiques (Cliquer pour Activer/Désactiver)">
+          <i class="fa fa-ruler-combined"></i>
+          <span class="btn-badge">Poteaux+Dist</span>
+        </button>
+      </div>
+      <div class="toolbar-section">
+        <button class="tool-btn tool-bt" id="tool-bt" title="Ligne BT NEUVE (Rouge) + carrés PBA et distances automatiques">
+          <i class="fa fa-bolt"></i>
+          <span class="btn-badge">BT Neuf</span>
+        </button>
+        <button class="tool-btn tool-btExt" id="tool-btExt" title="Réseau BT EXISTANT en noir">
+          <i class="fa fa-plug"></i>
+          <span class="btn-badge">BT Exist</span>
+        </button>
+      </div>
+      <div class="toolbar-section">
+        <button class="tool-btn tool-mt" id="tool-mt" title="Ligne MT NEUVE 22kV (Violette) + carrés PBA et distances automatiques">
+          <i class="fa fa-bolt"></i>
+          <span class="btn-badge">MT Neuf</span>
+        </button>
+        <button class="tool-btn tool-mtExt" id="tool-mtExt" title="Réseau MT EXISTANT en gris">
+          <i class="fa fa-plug"></i>
+          <span class="btn-badge">MT Exist</span>
+        </button>
+      </div>
+      <div class="toolbar-section">
+        <button class="tool-btn tool-btmt" id="tool-btmt" title="Ligne Mixte BT + MT (Cyan) - carrés PBA et distances automatiques">
+          <i class="fa fa-layer-group"></i>
+          <span class="btn-badge">BT + MT</span>
+        </button>
+      </div>
+
+      <!-- ZONES -->
+      <div class="toolbar-section">
+        <button class="tool-btn" id="tool-polygon" title="Dessiner un polygone / zone">
+          <i class="fa fa-draw-polygon"></i>
+          <span class="btn-badge">Zone</span>
+        </button>
+        <button class="tool-btn" id="tool-circle" title="Dessiner un cercle">
+          <i class="fa fa-circle-notch"></i>
+          <span class="btn-badge">Cercle</span>
+        </button>
+      </div>
+
+      <!-- EDIT -->
+      <div class="toolbar-label">EDIT</div>
+      <div class="toolbar-section">
+        <button class="tool-btn" id="tool-select" title="Modifier les elements"><i class="fa fa-mouse-pointer"></i></button>
+        <button class="tool-btn danger" id="tool-delete" title="Supprimer"><i class="fa fa-times"></i></button>
+        <button class="tool-btn" id="tool-undo" title="Annuler (Ctrl+Z)"><i class="fa fa-undo"></i></button>
+        <button class="tool-btn" id="tool-clear" title="Effacer tout"><i class="fa fa-trash"></i></button>
+      </div>
+
+      <div class="toolbar-section">
+        <button class="tool-btn info" id="tool-info" title="Liste des elements"><i class="fa fa-list"></i></button>
+      </div>
+
+      <!-- EXPORT -->
+      <div class="toolbar-label">EXPORT</div>
+      <div class="toolbar-section export-section">
+        <button class="export-btn txt" id="btn-export-txt" title="Exporter en TXT"><span>.TXT</span></button>
+        <button class="export-btn dxf" id="btn-export-dxf" title="Exporter en DXF (AutoCAD)"><span>.DXF</span></button>
+        <button class="export-btn kml" id="btn-export-kml" title="Exporter en KML (Google Earth)"><span>.KML</span></button>
+        <button class="export-btn jpg" id="btn-export-jpg" title="Capturer la carte en image"><span>.JPG</span></button>
+      </div>
+
+      <div class="toolbar-section">
+        <button class="tool-btn" id="tool-settings" title="Parametres et couleurs"><i class="fa fa-cog"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <span id="status-msg">Pret -- Cliquez sur la carte pour ajouter des elements.</span>
+    <span id="status-count"></span>
+    <span id="status-zoom"></span>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fa fa-cog"></i> Parametres</h3>
+        <button class="modal-close" id="close-settings"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label>Couleur des pistes :</label>
+          <input type="color" id="color-line" value="#FF6600" />
+        </div>
+        <div class="setting-group">
+          <label>Couleur des foyers :</label>
+          <input type="color" id="color-point" value="#FF0000" />
+        </div>
+        <div class="setting-group">
+          <label>Couleur des polygones :</label>
+          <input type="color" id="color-polygon" value="#0066FF" />
+        </div>
+        <div class="setting-group">
+          <label>Epaisseur des lignes :</label>
+          <input type="range" id="line-weight" min="1" max="10" value="3" />
+          <span id="line-weight-val">3</span>
+        </div>
+        <div class="setting-group">
+          <label>Opacite de remplissage :</label>
+          <input type="range" id="fill-opacity" min="0" max="100" value="20" />
+          <span id="fill-opacity-val">20%</span>
+        </div>
+        <div class="setting-group">
+          <label>Afficher les labels :</label>
+          <input type="checkbox" id="show-labels" checked />
+        </div>
+        <div class="setting-group">
+          <label>Nom du projet :</label>
+          <input type="text" id="project-name" value="Projet Map Tools" style="width:100%;padding:4px;box-sizing:border-box;" />
+        </div>
+        <div class="setting-divider" style="margin: 14px 0 8px; border-top: 2px solid #e67e22; padding-top: 8px;">
+          <h4 style="margin: 0 0 6px; font-size: 13px; color: #e67e22;"><i class="fa fa-file-invoice"></i> Export AutoCAD (.DXF)</h4>
+        </div>
+        <div class="setting-group">
+          <label>Police (Nom, X, Y) :</label>
+          <select id="modal-dxf-font" style="flex: 1; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
+            <option value="calibri.ttf" selected>Calibri (Corps)</option>
+            <option value="arial.ttf">Arial</option>
+            <option value="times.ttf">Times New Roman</option>
+            <option value="tahoma.ttf">Tahoma</option>
+            <option value="simplex.shx">Simplex</option>
+            <option value="txt.shx">Standard (txt)</option>
+          </select>
+        </div>
+        <div class="setting-group">
+          <label>Taille du texte (1 à 10 m) :</label>
+          <input type="range" id="modal-dxf-size" min="1.0" max="10.0" step="0.5" value="3.5" />
+          <span id="modal-dxf-size-val" style="min-width: 45px; font-weight: bold; color: #e67e22;">3.5 m</span>
+        </div>
+        <div class="setting-group">
+          <label>Décalage symbole (1 à 10 m) :</label>
+          <input type="range" id="modal-dxf-offset" min="1.0" max="10.0" step="0.5" value="3.5" />
+          <span id="modal-dxf-offset-val" style="min-width: 45px; font-weight: bold; color: #e67e22;">3.5 m</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO PANEL -->
+  <div id="info-panel" class="hidden">
+    <div class="info-header">
+      <span><i class="fa fa-layer-group"></i> Elements dessines</span>
+      <button id="close-info"><i class="fa fa-times"></i></button>
+    </div>
+    <div id="info-list"></div>
+  </div>
+
+  <!-- DROP OVERLAY -->
+  <div id="drop-overlay" class="hidden">
+    <div class="drop-content">
+      <i class="fa fa-file-import fa-3x"></i>
+      <p>Deposez votre fichier ici</p>
+      <small>KML, KMZ, DXF, GPX, TXT, CSV</small>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.geometryutil/0.10.3/leaflet.geometryutil.min.js"></script>
+  <script src="js/togeojson.js"></script>
+  <script>
+    if (typeof toGeoJSON === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/@mapbox/togeojson@0.16.0/togeojson.js"><\/script>');
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="js/coordinates.js?v=2"></script>
+  <script src="js/map.js?v=2"></script>
+  <script src="js/draw.js?v=16"></script>
+  <script src="js/import.js?v=24"></script>
+  <script src="js/export-kml.js?v=6"></script>
+  <script src="js/export-dxf.js?v=33"></script>
+  <script src="js/app.js?v=9"></script>
+</body>
+</html>
+
