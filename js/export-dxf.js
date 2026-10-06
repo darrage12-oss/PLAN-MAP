@@ -48,15 +48,24 @@ function exportDXF() {
   dxf += P(0,'SECTION'); dxf += P(2,'TABLES');
 
   // LTYPE
-  dxf += P(0,'TABLE'); dxf += P(2,'LTYPE'); dxf += P(70,'     1');
+  dxf += P(0,'TABLE'); dxf += P(2,'LTYPE'); dxf += P(70,'     3');
   dxf += P(0,'LTYPE'); dxf += P(2,'CONTINUOUS');
   dxf += P(70,'    64'); dxf += P(3,'Solid line');
   dxf += P(72,'    65'); dxf += P(73,'     0'); dxf += P(40,'0.0');
+  dxf += P(0,'LTYPE'); dxf += P(2,'DASHED');
+  dxf += P(70,'    64'); dxf += P(3,'__ __ __ __ __ __ __ __ __ __ __ __ __ _');
+  dxf += P(72,'    65'); dxf += P(73,'     2'); dxf += P(40,'10.0');
+  dxf += P(49,'6.0'); dxf += P(49,'-4.0');
+  dxf += P(0,'LTYPE'); dxf += P(2,'DOT');
+  dxf += P(70,'    64'); dxf += P(3,'. . . . . . . . . . . . . . . . . . . .');
+  dxf += P(72,'    65'); dxf += P(73,'     2'); dxf += P(40,'2.0');
+  dxf += P(49,'0.0'); dxf += P(49,'-2.0');
   dxf += P(0,'ENDTAB');
 
   // LAYER
   const layerDefs = [
-    { name:'PISTES',         color:30, ltype:'CONTINUOUS' },
+    { name:'PISTES_PIETONS', color:40, ltype:'DOT' },
+    { name:'PISTES',         color:30, ltype:'DASHED' },
     { name:'ROUTES',         color: 3, ltype:'CONTINUOUS' },
     { name:'LIGNES_BT',      color: 1, ltype:'CONTINUOUS' },
     { name:'SUPPORTS_BT',    color:11, ltype:'CONTINUOUS' },
@@ -118,8 +127,16 @@ function exportDXF() {
     const rawName = layer._elementName || layer._customTitle || '';
     const n = String(rawName).toLowerCase();
 
+    /* ── 0. Piste Piétons / Sentier (dessinée ou importée KML/DXF) ───── */
+    if (type === 'piste_pieton' || (!type && (n.includes('pieton') || n.includes('piéton') || n.includes('sentier')) && layer instanceof L.Polyline && !(layer instanceof L.Polygon))) {
+      const segments = extractPolylineSegmentsDXF(layer.getLatLngs());
+      segments.forEach(function(seg) {
+        const pts = seg.map(ll => latlon2proj(ll.lat, ll.lng, epsg)).filter(Boolean);
+        if (pts.length >= 2) dxf += dxfPolyline(pts, 'PISTES_PIETONS', false);
+      });
+    }
     /* ── 1. Piste (dessinée ou importée KML/DXF) ─────────────────────── */
-    if (type === 'piste' || (!type && n.includes('piste') && layer instanceof L.Polyline && !(layer instanceof L.Polygon))) {
+    else if (type === 'piste' || (!type && n.includes('piste') && layer instanceof L.Polyline && !(layer instanceof L.Polygon))) {
       const segments = extractPolylineSegmentsDXF(layer.getLatLngs());
       segments.forEach(function(seg) {
         const pts = seg.map(ll => latlon2proj(ll.lat, ll.lng, epsg)).filter(Boolean);
@@ -427,7 +444,8 @@ function exportDXF() {
     /* ── 9. Polyline generique (dessinee ou importee KML/DXF) ─── */
     else if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
       let targetLayer = layer._dxfLayer || 'PISTES';
-      if (n.includes('route')) targetLayer = 'ROUTES';
+      if (n.includes('pieton') || n.includes('piéton') || n.includes('sentier')) targetLayer = 'PISTES_PIETONS';
+      else if (n.includes('route')) targetLayer = 'ROUTES';
       else if (n.includes('bt')) targetLayer = n.includes('exist') ? 'BT_EXISTANT' : 'LIGNES_BT';
 
       const segments = extractPolylineSegmentsDXF(layer.getLatLngs());

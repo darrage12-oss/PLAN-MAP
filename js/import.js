@@ -516,6 +516,7 @@ function importDXF(text) {
   /* ── Déduire la couleur selon la couche DXF ── */
   function layerColor(layerName) {
     const l = (layerName || '').toUpperCase();
+    if (l.includes('PISTE') && (l.includes('PIETON') || l.includes('SENTIER'))) return '#8e44ad';
     if (l.includes('PISTE'))    return '#f39c12';
     if (l.includes('ROUTE'))    return '#27ae60';
     if (l.includes('BT') || l.includes('LIGNE')) return '#e74c3c';
@@ -755,7 +756,8 @@ function renderGeoJSON(geojson, sourceName) {
         if (t === 'LineString' || t === 'MultiLineString') {
           let color = stroke || STYLES.lineColor;
           let weight = STYLES.weight || 3;
-          if (name.includes('route') || style.includes('route')) { color = '#27ae60'; weight = 4; }
+          if (name.includes('pieton') || name.includes('piéton') || name.includes('sentier') || style.includes('pieton')) { color = '#8e44ad'; weight = 3.5; }
+          else if (name.includes('route') || style.includes('route')) { color = '#27ae60'; weight = 4; }
           else if (name.includes('piste') || style.includes('piste')) { color = '#FF6600'; weight = 3; }
           else if (name.includes('bt neuf') || name.includes('bt_neuf') || (name.includes('bt') && !name.includes('exist')) || style.includes('bt')) { color = '#e74c3c'; weight = 3; }
           else if (name.includes('exist') || style.includes('btext')) { color = '#111111'; weight = 3; }
@@ -879,7 +881,8 @@ function renderGeoJSON(geojson, sourceName) {
 
           const n = cleanLineName.toLowerCase();
           const s = (props.styleUrl || '').toLowerCase();
-          if (n.includes('piste') || s.includes('piste')) layer._elementType = 'piste';
+          if (n.includes('pieton') || n.includes('piéton') || n.includes('sentier') || s.includes('pieton')) layer._elementType = 'piste_pieton';
+          else if (n.includes('piste') || s.includes('piste')) layer._elementType = 'piste';
           else if (n.includes('route') || s.includes('route')) layer._elementType = 'route';
           else if (n.includes('btmt') || (n.includes('bt') && n.includes('mt')) || s.includes('btmt')) layer._elementType = 'btmt';
           else if ((n.includes('bt') && n.includes('exist')) || s.includes('btext')) layer._elementType = 'btExt';

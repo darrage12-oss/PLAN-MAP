@@ -25,6 +25,7 @@ let STYLES = {
   polygonColor: '#0066FF',
   routeColor:   '#27ae60',
   pisteColor:   '#f39c12',
+  pistePietonColor: '#8e44ad',
   btColor:      '#e74c3c',
   btExtColor:   '#000000',
   mtColor:      '#8e44ad',
@@ -35,9 +36,101 @@ let STYLES = {
   fillOpacity: 0.2
 };
 
-/* ─── PARALLEL LINE CONFIG ────────────────────────────────────────────── */
-const PISTE_OFFSET = 4;   // metres entre les 2 traits de piste
-const ROUTE_OFFSET = 7;   // metres entre les 2 traits de route
+/* ─── VOIES & PISTES CONFIG ────────────────────────────────────────────── */
+let CURRENT_ROUTE_WIDTH  = 10;   // metres entre les 2 traits de route (8m à 30m)
+let CURRENT_PISTE_WIDTH  = 4;    // metres entre les 2 traits de piste (2m à 8m)
+let CURRENT_PIETON_WIDTH = 1.5;  // metres entre les 2 traits de piste piétons (1m à 2m)
+let LAST_ACTIVE_TRACK_TOOL = 'route';
+
+window.CURRENT_ROUTE_WIDTH  = CURRENT_ROUTE_WIDTH;
+window.CURRENT_PISTE_WIDTH  = CURRENT_PISTE_WIDTH;
+window.CURRENT_PIETON_WIDTH = CURRENT_PIETON_WIDTH;
+
+function setTrackWidth(type, width) {
+  width = parseFloat(width);
+  if (isNaN(width) || width <= 0) return;
+  if (type === 'route') {
+    CURRENT_ROUTE_WIDTH = width;
+    window.CURRENT_ROUTE_WIDTH = width;
+  } else if (type === 'piste') {
+    CURRENT_PISTE_WIDTH = width;
+    window.CURRENT_PISTE_WIDTH = width;
+  } else if (type === 'piste_pieton') {
+    CURRENT_PIETON_WIDTH = width;
+    window.CURRENT_PIETON_WIDTH = width;
+  }
+  updateWidthUI();
+}
+window.setTrackWidth = setTrackWidth;
+
+function updateWidthUI() {
+  const badgeRoute = document.getElementById('badge-route-w');
+  if (badgeRoute) badgeRoute.textContent = CURRENT_ROUTE_WIDTH + 'm';
+  const badgePiste = document.getElementById('badge-piste-w');
+  if (badgePiste) badgePiste.textContent = CURRENT_PISTE_WIDTH + 'm';
+  const badgePieton = document.getElementById('badge-pieton-w');
+  if (badgePieton) badgePieton.textContent = CURRENT_PIETON_WIDTH + 'm';
+
+  const settingRoute = document.getElementById('setting-route-width');
+  if (settingRoute) settingRoute.value = CURRENT_ROUTE_WIDTH;
+  const settingPiste = document.getElementById('setting-piste-width');
+  if (settingPiste) settingPiste.value = CURRENT_PISTE_WIDTH;
+  const settingPieton = document.getElementById('setting-pieton-width');
+  if (settingPieton) settingPieton.value = CURRENT_PIETON_WIDTH;
+
+  const mode = (activeTool === 'route' || activeTool === 'piste' || activeTool === 'piste_pieton') ? activeTool : LAST_ACTIVE_TRACK_TOOL;
+  renderTrackWidthSelect(mode);
+}
+window.updateWidthUI = updateWidthUI;
+
+function renderTrackWidthSelect(mode) {
+  const sel = document.getElementById('sel-road-width');
+  const label = document.getElementById('road-width-label');
+  const modeName = document.getElementById('road-width-mode');
+  if (!sel) return;
+
+  mode = mode || 'route';
+  LAST_ACTIVE_TRACK_TOOL = mode;
+
+  if (label && modeName) {
+    label.className = 'road-width-label';
+    if (mode === 'route') {
+      modeName.textContent = 'Route';
+    } else if (mode === 'piste') {
+      label.classList.add('mode-piste');
+      modeName.textContent = 'Piste';
+    } else if (mode === 'piste_pieton') {
+      label.classList.add('mode-pieton');
+      modeName.textContent = 'Piétons';
+    }
+  }
+
+  let options = [];
+  let currentVal = 10;
+  if (mode === 'route') {
+    currentVal = CURRENT_ROUTE_WIDTH;
+    const presets = [8, 9, 10, 11, 12, 14, 15, 16, 18, 20, 22, 25, 30];
+    if (!presets.includes(currentVal)) presets.push(currentVal);
+    presets.sort((a,b) => a - b);
+    options = presets.map(w => ({ value: w, text: `${w} m` + (w === 10 ? ' (std)' : '') }));
+  } else if (mode === 'piste') {
+    currentVal = CURRENT_PISTE_WIDTH;
+    const presets = [2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8];
+    if (!presets.includes(currentVal)) presets.push(currentVal);
+    presets.sort((a,b) => a - b);
+    options = presets.map(w => ({ value: w, text: `${w} m` + (w === 4 ? ' (std)' : '') }));
+  } else if (mode === 'piste_pieton') {
+    currentVal = CURRENT_PIETON_WIDTH;
+    const presets = [1.0, 1.2, 1.5, 1.8, 2.0, 2.5, 3.0];
+    if (!presets.includes(currentVal)) presets.push(currentVal);
+    presets.sort((a,b) => a - b);
+    options = presets.map(w => ({ value: w, text: `${w} m` + (w === 1.5 ? ' (std)' : '') }));
+  }
+
+  sel.innerHTML = options.map(o => `<option value="${o.value}" ${Math.abs(o.value - currentVal) < 0.01 ? 'selected' : ''}>${o.text}</option>`).join('') +
+    `<option value="custom">Autre / Saisir...</option>`;
+}
+window.renderTrackWidthSelect = renderTrackWidthSelect;
 
 /* ─── HELPER ETIQUETTE DE DISTANCE ENTRE DEUX POTEAUX (SUR LA CARTE) ─── */
 function createDistanceLabelIcon(distMeters, networkType) {
@@ -111,7 +204,8 @@ function getDrawOptions(type) {
     point:   { icon: createCoordIcon() },
     line:    { shapeOptions: { color: STYLES.lineColor,    weight: STYLES.weight, opacity: 0.9 }, showLength: true, metric: true },
     route:   { shapeOptions: { color: STYLES.routeColor,   weight: 4,             opacity: 0.95 }, showLength: true, metric: true },
-    piste:   { shapeOptions: { color: STYLES.pisteColor,   weight: 3,             opacity: 0.9, dashArray: '10,5' }, showLength: true, metric: true },
+    piste:   { shapeOptions: { color: STYLES.pisteColor,   weight: 3,             opacity: 0.9, dashArray: '10,6' }, showLength: true, metric: true },
+    piste_pieton: { shapeOptions: { color: STYLES.pistePietonColor || '#8e44ad', weight: 3.5, opacity: 0.95, dashArray: '1,7', lineCap: 'round', lineJoin: 'round' }, showLength: true, metric: true },
     polygon: { shapeOptions: { color: STYLES.polygonColor, weight: STYLES.weight, fillColor: STYLES.polygonColor, fillOpacity: STYLES.fillOpacity }, showArea: true, metric: true },
     circle:  { shapeOptions: { color: STYLES.polygonColor, weight: STYLES.weight, fillColor: STYLES.polygonColor, fillOpacity: STYLES.fillOpacity }, showRadius: true, metric: true },
     bt:      { icon: pbaIcon, shapeOptions: { color: STYLES.btColor,      weight: 2.5, opacity: 1, dashArray: '8,4' }, showLength: true, metric: true },
@@ -190,6 +284,7 @@ function startDraw(type) {
     case 'line':    handler = new L.Draw.Polyline(MAP, opts); break;
     case 'route':   handler = new L.Draw.Polyline(MAP, opts); break;
     case 'piste':   handler = new L.Draw.Polyline(MAP, opts); break;
+    case 'piste_pieton': handler = new L.Draw.Polyline(MAP, opts); break;
     case 'polygon': handler = new L.Draw.Polygon(MAP, opts); break;
     case 'circle':  handler = new L.Draw.Circle(MAP, opts); break;
     case 'bt':      handler = new L.Draw.Polyline(MAP, opts); break;
@@ -202,6 +297,10 @@ function startDraw(type) {
   handler.enable();
   currentDrawHandler = handler;
   activeTool = type;
+
+  if (type === 'route' || type === 'piste' || type === 'piste_pieton') {
+    renderTrackWidthSelect(type);
+  }
 
   const isNet = (type === 'bt' || type === 'mt' || type === 'btmt' || type === 'btExt' || type === 'mtExt');
   const hud = document.getElementById('live-measure-hud');
@@ -224,8 +323,8 @@ function startDraw(type) {
 
   const btnMap = {
     foyer:'tool-foyer', coord:'tool-coord', pba:'tool-pba', acier:'tool-acier',
-    line:'tool-line', route:'tool-route', piste:'tool-piste', polygon:'tool-polygon',
-    circle:'tool-circle', bt:'tool-bt', btExt:'tool-btExt',
+    line:'tool-line', route:'tool-route', piste:'tool-piste', piste_pieton:'tool-piste-pieton',
+    polygon:'tool-polygon', circle:'tool-circle', bt:'tool-bt', btExt:'tool-btExt',
     mt:'tool-mt', mtExt:'tool-mtExt', btmt:'tool-btmt'
   };
   const labels = {
@@ -234,8 +333,9 @@ function startDraw(type) {
     pba:'Support PBA (Carré Noir) — Cliquez sur la carte pour placer. [Echap] pour quitter',
     acier:'Support Acier (Cercle Noir) — Cliquez sur la carte pour placer. [Echap] pour quitter',
     line:'Ligne',
-    route:'Route (7m avec deux traits paralleles)',
-    piste:'Piste (4m avec deux traits paralleles)',
+    route:`Route (${CURRENT_ROUTE_WIDTH}m - traits pleins) : Cliquez les points de l'axe, double-clic pour terminer`,
+    piste:`Piste (${CURRENT_PISTE_WIDTH}m - traits tiretés) : Cliquez les points de l'axe, double-clic pour terminer`,
+    piste_pieton:`Piste Piétons (${CURRENT_PIETON_WIDTH}m - deux rangées de pointillés) : Cliquez l'axe, double-clic pour terminer`,
     polygon:'Polygone / Zone',
     circle:'Cercle',
     bt:'Ligne BT : Cliquez chaque support (carré PBA automatique + distance live, double-clic pour valider)',
@@ -711,6 +811,8 @@ function setupDrawEvents() {
       addDoubleLinePiste(layer);
     } else if (tool === 'route') {
       addDoubleLineRoute(layer);
+    } else if (tool === 'piste_pieton') {
+      addDoubleLinePistePieton(layer);
     } else if (tool === 'bt' || tool === 'btExt' || tool === 'mt' || tool === 'mtExt' || tool === 'btmt') {
       addNetworkLineWithPoles(layer, tool);
     } else if (tool === 'foyer') {
@@ -1654,14 +1756,176 @@ function deleteSupportPoint(layer) {
 }
 window.deleteSupportPoint = deleteSupportPoint;
 
-/* ─── DOUBLE LIGNE PISTE (4m) ─────────────────────────────────────────── */
+/* ─── VOIES & PISTES : POPUP & MODIFICATION DE LARGEUR EN DIRECT ─── */
+function bindRoadPopup(layer, type, groupId, width, centerline) {
+  const isRoute = (type === 'route');
+  const isPiste = (type === 'piste');
+  const typeName = isRoute ? 'Route' : (isPiste ? 'Piste' : 'Piste Piétons');
+  const badgeColor = isRoute ? '#27ae60' : (isPiste ? '#e67e22' : '#8e44ad');
+  const icon = isRoute ? 'fa-road' : (isPiste ? 'fa-person-hiking' : 'fa-person-walking');
+  const len = getPolylineLength(centerline || layer.getLatLngs());
+  const lenStr = formatDistance(len);
+
+  const html = `
+    <div style="font-size:13px;min-width:180px;line-height:1.5;">
+      <div style="font-weight:700;color:${badgeColor};margin-bottom:4px;">
+        <i class="fa ${icon}"></i> ${typeName} #${groupId}
+      </div>
+      <div style="padding:4px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;font-size:12px;">
+        <div><b>Largeur :</b> <span style="font-weight:bold;color:${badgeColor};">${width} m</span></div>
+        <div><b>Longueur axe :</b> ${lenStr}</div>
+      </div>
+      <div style="display:flex;gap:4px;margin-top:6px;">
+        <button onclick="changeTrackWidth(${groupId})" style="flex:1;background:#3498db;color:#fff;border:none;padding:4px 6px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">
+          <i class="fa fa-arrows-left-right"></i> Modifier Largeur
+        </button>
+        <button onclick="deleteTrackGroup(${groupId})" style="background:#e74c3c;color:#fff;border:none;padding:4px 7px;border-radius:3px;cursor:pointer;font-size:11px;" title="Supprimer la voie">
+          <i class="fa fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  layer.bindPopup(html);
+}
+
+window.changeTrackWidth = function(groupId) {
+  let target1 = null, target2 = null;
+  drawnItems.eachLayer(l => {
+    if (l._groupId === groupId) {
+      if (!target1) target1 = l;
+      else if (!target2) target2 = l;
+    }
+  });
+  if (!target1) return;
+  const type = target1._elementType || 'route';
+  const currentW = target1._widthMeters || (type === 'route' ? CURRENT_ROUTE_WIDTH : (type === 'piste' ? CURRENT_PISTE_WIDTH : CURRENT_PIETON_WIDTH));
+  const minW = type === 'route' ? 8 : (type === 'piste' ? 2 : 1);
+  const maxW = type === 'route' ? 30 : (type === 'piste' ? 8 : 3);
+  const val = prompt(`Nouvelle largeur en mètres pour ${getTypeFR(type)} #${groupId} (entre ${minW}m et ${maxW}m) :`, currentW);
+  if (val === null) return;
+  const newW = parseFloat(val);
+  if (isNaN(newW) || newW <= 0) {
+    alert("Veuillez saisir une largeur valide en mètres.");
+    return;
+  }
+  const centerline = target1._centerlineVertices || target1._routeVertices || target1._pisteVertices;
+  if (!centerline) {
+    alert("Impossible de recalculer : axe d'origine non disponible.");
+    return;
+  }
+  const halfGap = newW / 2;
+  const ll1 = computeParallelLatLngs(centerline, +halfGap);
+  const ll2 = computeParallelLatLngs(centerline, -halfGap);
+  target1.setLatLngs(ll1);
+  target1._widthMeters = newW;
+  if (target2) {
+    target2.setLatLngs(ll2);
+    target2._widthMeters = newW;
+  }
+  bindRoadPopup(target1, type, groupId, newW, centerline);
+  if (target2) bindRoadPopup(target2, type, groupId, newW, centerline);
+  setStatus(`${getTypeFR(type)} #${groupId} : Largeur mise à jour à ${newW} m.`);
+};
+
+window.deleteTrackGroup = function(groupId) {
+  const toRemove = [];
+  drawnItems.eachLayer(l => {
+    if (l._groupId === groupId) toRemove.push(l);
+  });
+  toRemove.forEach(l => {
+    try { drawnItems.removeLayer(l); } catch(e){}
+  });
+  updateElementCount();
+  updateInfoPanel();
+  setStatus(`Voie #${groupId} supprimée.`);
+};
+
+/* ─── DOUBLE LIGNE PISTE PIÉTONS (1m à 2m - POINTILLÉS PARALLÈLES) ─── */
+function addDoubleLinePistePieton(mainLayer) {
+  const lls       = mainLayer.getLatLngs();
+  const groupId   = elementCounter;
+  const width     = CURRENT_PIETON_WIDTH || 1.5;
+  const halfGap   = width / 2;
+
+  const styleMain = {
+    color: STYLES.pistePietonColor || '#8e44ad',
+    weight: 3.5,
+    opacity: 0.95,
+    dashArray: '1, 7',
+    lineCap: 'round',
+    lineJoin: 'round'
+  };
+  const stylePar  = {
+    color: STYLES.pistePietonColor || '#8e44ad',
+    weight: 3.5,
+    opacity: 0.95,
+    dashArray: '1, 7',
+    lineCap: 'round',
+    lineJoin: 'round'
+  };
+
+  // Ligne 1 (offset +halfGap)
+  const ll1 = computeParallelLatLngs(lls, +halfGap);
+  const l1  = L.polyline(ll1, styleMain);
+  l1._elementType = 'piste_pieton';
+  l1._elementId   = elementCounter;
+  l1._elementName = 'Piste Piétons #' + groupId;
+  l1._groupId     = groupId;
+  l1._isParallel  = false;
+  l1._centerlineVertices = lls;
+  l1._pisteVertices = lls;
+  l1._widthMeters = width;
+  drawnItems.addLayer(l1);
+  undoStack.push(l1);
+
+  // Ligne 2 (offset -halfGap)
+  elementCounter++;
+  const ll2 = computeParallelLatLngs(lls, -halfGap);
+  const l2  = L.polyline(ll2, stylePar);
+  l2._elementType = 'piste_pieton';
+  l2._elementId   = elementCounter;
+  l2._elementName = 'Piste Piétons #' + groupId;
+  l2._groupId     = groupId;
+  l2._isParallel  = true;
+  l2._centerlineVertices = lls;
+  l2._pisteVertices = lls;
+  l2._widthMeters = width;
+  drawnItems.addLayer(l2);
+  undoStack.push(l2);
+
+  l1._pairedLayer = l2;
+  l2._pairedLayer = l1;
+
+  bindRoadPopup(l1, 'piste_pieton', groupId, width, lls);
+  bindRoadPopup(l2, 'piste_pieton', groupId, width, lls);
+
+  const len = getPolylineLength(lls);
+  setStatus('Piste Piétons #' + groupId + ' - Longueur: ' + formatDistance(len) + ' | Largeur: ' + width + ' m');
+}
+
+/* ─── DOUBLE LIGNE PISTE (2m à 8m - TIRETS PARALLÈLES) ─── */
 function addDoubleLinePiste(mainLayer) {
   const lls       = mainLayer.getLatLngs();
   const groupId   = elementCounter;
-  const halfGap   = PISTE_OFFSET / 2;  // 2m de chaque cote
+  const width     = CURRENT_PISTE_WIDTH || 4;
+  const halfGap   = width / 2;
 
-  const styleMain = { color: STYLES.pisteColor, weight: 2, opacity: 0.95, dashArray: null };
-  const stylePar  = { color: STYLES.pisteColor, weight: 2, opacity: 0.95, dashArray: null };
+  const styleMain = {
+    color: STYLES.pisteColor || '#f39c12',
+    weight: 2.5,
+    opacity: 0.95,
+    dashArray: '10, 6',
+    lineCap: 'butt',
+    lineJoin: 'round'
+  };
+  const stylePar  = {
+    color: STYLES.pisteColor || '#f39c12',
+    weight: 2.5,
+    opacity: 0.95,
+    dashArray: '10, 6',
+    lineCap: 'butt',
+    lineJoin: 'round'
+  };
 
   // Ligne 1 (offset +halfGap)
   const ll1 = computeParallelLatLngs(lls, +halfGap);
@@ -1671,7 +1935,9 @@ function addDoubleLinePiste(mainLayer) {
   l1._elementName = 'Piste #' + groupId;
   l1._groupId     = groupId;
   l1._isParallel  = false;
+  l1._centerlineVertices = lls;
   l1._pisteVertices = lls;
+  l1._widthMeters = width;
   drawnItems.addLayer(l1);
   undoStack.push(l1);
 
@@ -1684,20 +1950,36 @@ function addDoubleLinePiste(mainLayer) {
   l2._elementName = 'Piste #' + groupId;
   l2._groupId     = groupId;
   l2._isParallel  = true;
+  l2._centerlineVertices = lls;
+  l2._pisteVertices = lls;
+  l2._widthMeters = width;
   drawnItems.addLayer(l2);
   undoStack.push(l2);
 
+  l1._pairedLayer = l2;
+  l2._pairedLayer = l1;
+
+  bindRoadPopup(l1, 'piste', groupId, width, lls);
+  bindRoadPopup(l2, 'piste', groupId, width, lls);
+
   const len = getPolylineLength(lls);
-  setStatus('Piste #' + groupId + ' - Longueur: ' + formatDistance(len) + ' | Largeur: ' + PISTE_OFFSET + ' m');
+  setStatus('Piste #' + groupId + ' - Longueur: ' + formatDistance(len) + ' | Largeur: ' + width + ' m');
 }
 
-/* ─── DOUBLE LIGNE ROUTE (7m) ─────────────────────────────────────────── */
+/* ─── DOUBLE LIGNE ROUTE (8m à 30m - TRAITS PLEINS PARALLÈLES) ─── */
 function addDoubleLineRoute(mainLayer) {
   const lls     = mainLayer.getLatLngs();
   const groupId = elementCounter;
-  const halfGap = ROUTE_OFFSET / 2;  // 3.5m de chaque cote
+  const width   = CURRENT_ROUTE_WIDTH || 10;
+  const halfGap = width / 2;
 
-  const style = { color: STYLES.routeColor, weight: 3, opacity: 0.95, dashArray: null };
+  const style = {
+    color: STYLES.routeColor || '#27ae60',
+    weight: 3,
+    opacity: 0.95,
+    dashArray: null,
+    lineJoin: 'round'
+  };
 
   // Ligne 1 (offset +halfGap)
   const ll1 = computeParallelLatLngs(lls, +halfGap);
@@ -1707,7 +1989,9 @@ function addDoubleLineRoute(mainLayer) {
   l1._elementName = 'Route #' + groupId;
   l1._groupId     = groupId;
   l1._isParallel  = false;
+  l1._centerlineVertices = lls;
   l1._routeVertices = lls;
+  l1._widthMeters = width;
   drawnItems.addLayer(l1);
   undoStack.push(l1);
 
@@ -1720,11 +2004,20 @@ function addDoubleLineRoute(mainLayer) {
   l2._elementName = 'Route #' + groupId;
   l2._groupId     = groupId;
   l2._isParallel  = true;
+  l2._centerlineVertices = lls;
+  l2._routeVertices = lls;
+  l2._widthMeters = width;
   drawnItems.addLayer(l2);
   undoStack.push(l2);
 
+  l1._pairedLayer = l2;
+  l2._pairedLayer = l1;
+
+  bindRoadPopup(l1, 'route', groupId, width, lls);
+  bindRoadPopup(l2, 'route', groupId, width, lls);
+
   const len = getPolylineLength(lls);
-  setStatus('Route #' + groupId + ' - Longueur: ' + formatDistance(len) + ' | Largeur: ' + ROUTE_OFFSET + ' m');
+  setStatus('Route #' + groupId + ' - Longueur: ' + formatDistance(len) + ' | Largeur: ' + width + ' m');
 }
 
 /* ─── GESTION MODERNE DU TRACÉ RÉSEAU (BT / MT / MIXTE) AVEC POTEAUX PBA & DISTANCES ─── */
@@ -1943,6 +2236,7 @@ function computeParallelLatLngs(lls, offsetMeters) {
   const result = [];
   for (let i = 0; i < lls.length; i++) {
     let angle;
+    let miterScale = 1;
     if (lls.length === 1) {
       angle = 0;
     } else if (i === 0) {
@@ -1956,9 +2250,13 @@ function computeParallelLatLngs(lls, offsetMeters) {
       while (diff >  180) diff -= 360;
       while (diff < -180) diff += 360;
       angle = b1 + diff / 2;
+      const cosHalf = Math.cos((diff / 2) * Math.PI / 180);
+      if (Math.abs(cosHalf) > 0.15) {
+        miterScale = Math.min(Math.max(1 / cosHalf, 0.5), 2.5);
+      }
     }
     const perpAngle = angle + 90;
-    result.push(destinationPoint(lls[i].lat, lls[i].lng, offsetMeters, perpAngle));
+    result.push(destinationPoint(lls[i].lat, lls[i].lng, offsetMeters * miterScale, perpAngle));
   }
   return result;
 }
@@ -1994,7 +2292,10 @@ function getTypeFR(type) {
   const m = {
     foyer:'Limite Foyer', coord:'Coordonnees X/Y',
     marker:'Point', polyline:'Ligne', polygon:'Zone', circle:'Cercle',
-    rectangle:'Rectangle', route:'Route (7m)', piste:'Piste (4m)',
+    rectangle:'Rectangle',
+    route: 'Route (' + CURRENT_ROUTE_WIDTH + 'm)',
+    piste: 'Piste (' + CURRENT_PISTE_WIDTH + 'm)',
+    piste_pieton: 'Piste Piétons (' + CURRENT_PIETON_WIDTH + 'm)',
     bt:'Ligne BT Neuf', 'bt-support':'Support BT', btExt:'BT Existant', line:'Ligne'
   };
   return m[type] || type;
@@ -2122,7 +2423,7 @@ function updateInfoPanel() {
   const typeIcons = {
     foyer:'fa-home', coord:'fa-crosshairs',
     marker:'fa-location-dot', polyline:'fa-route', polygon:'fa-draw-polygon',
-    circle:'fa-circle-notch', route:'fa-road', piste:'fa-person-hiking',
+    circle:'fa-circle-notch', route:'fa-road', piste:'fa-person-hiking', piste_pieton:'fa-person-walking',
     bt:'fa-bolt', 'bt-support':'fa-tower-cell', btExt:'fa-plug',
     mt:'fa-bolt', 'mt-support':'fa-tower-cell', mtExt:'fa-plug',
     btmt:'fa-layer-group', 'btmt-support':'fa-tower-cell'
@@ -2130,7 +2431,7 @@ function updateInfoPanel() {
   const typeColors = {
     foyer:'#c0392b', coord:'#8e44ad',
     marker:'#e74c3c', polyline:'#3a86ff', polygon:'#9b59b6',
-    circle:'#1abc9c', route:'#27ae60', piste:'#f39c12',
+    circle:'#1abc9c', route:'#27ae60', piste:'#f39c12', piste_pieton:'#8e44ad',
     bt:'#e74c3c', 'bt-support':'#c0392b', btExt:'#111',
     mt:'#8e44ad', 'mt-support':'#8e44ad', mtExt:'#555',
     btmt:'#00b4d8', 'btmt-support':'#00b4d8'

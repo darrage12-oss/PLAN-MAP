@@ -59,6 +59,13 @@ function exportKML() {
       </LineStyle>
     </Style>
 
+    <Style id="sty-pieton">
+      <LineStyle>
+        <color>ffad448e</color>
+        <width>3.0</width>
+      </LineStyle>
+    </Style>
+
     <Style id="sty-piste">
       <LineStyle>
         <color>ff1e88e5</color>
@@ -185,7 +192,8 @@ function exportKML() {
 
       let styleUrl = '#sty-line';
       const n = (rawName || '').toLowerCase();
-      if (type === 'piste' || n.includes('piste')) styleUrl = '#sty-piste';
+      if (type === 'piste_pieton' || n.includes('pieton') || n.includes('piéton') || n.includes('sentier')) styleUrl = '#sty-pieton';
+      else if (type === 'piste' || n.includes('piste')) styleUrl = '#sty-piste';
       else if (type === 'route' || n.includes('route')) styleUrl = '#sty-route';
       else if (type === 'btmt' || (n.includes('bt') && n.includes('mt')) || n.includes('mixte')) styleUrl = '#sty-btmt';
       else if (type === 'btExt' || (n.includes('bt') && n.includes('exist')) || n.includes('btext')) styleUrl = '#sty-btExt';

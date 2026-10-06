@@ -133,6 +133,68 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('tool-coord').addEventListener('click',   function() { toggleTool('coord'); });
   document.getElementById('tool-piste').addEventListener('click',   function() { toggleTool('piste'); });
   document.getElementById('tool-route').addEventListener('click',   function() { toggleTool('route'); });
+  const toolPistePieton = document.getElementById('tool-piste-pieton');
+  if (toolPistePieton) toolPistePieton.addEventListener('click', function() { toggleTool('piste_pieton'); });
+
+  /* ── CONTRÔLE RAPIDE DE LARGEUR DE VOIE (ROUTE / PISTE / PIÉTONS) ── */
+  const selRoadWidth = document.getElementById('sel-road-width');
+  if (selRoadWidth) {
+    selRoadWidth.addEventListener('change', function() {
+      const mode = (activeTool === 'route' || activeTool === 'piste' || activeTool === 'piste_pieton') ? activeTool : (LAST_ACTIVE_TRACK_TOOL || 'route');
+      if (this.value === 'custom') {
+        const minW = mode === 'route' ? 8 : (mode === 'piste' ? 2 : 1);
+        const maxW = mode === 'route' ? 30 : (mode === 'piste' ? 8 : 3);
+        const curW = mode === 'route' ? CURRENT_ROUTE_WIDTH : (mode === 'piste' ? CURRENT_PISTE_WIDTH : CURRENT_PIETON_WIDTH);
+        const val = prompt(`Saisir la largeur en mètres pour ${mode} (entre ${minW}m et ${maxW}m) :`, curW);
+        if (val !== null) {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num > 0) {
+            setTrackWidth(mode, num);
+          } else {
+            renderTrackWidthSelect(mode);
+          }
+        } else {
+          renderTrackWidthSelect(mode);
+        }
+      } else {
+        setTrackWidth(mode, parseFloat(this.value));
+      }
+    });
+  }
+
+  const btnCustomWidth = document.getElementById('btn-custom-road-width');
+  if (btnCustomWidth) {
+    btnCustomWidth.addEventListener('click', function() {
+      const mode = (activeTool === 'route' || activeTool === 'piste' || activeTool === 'piste_pieton') ? activeTool : (LAST_ACTIVE_TRACK_TOOL || 'route');
+      const minW = mode === 'route' ? 8 : (mode === 'piste' ? 2 : 1);
+      const maxW = mode === 'route' ? 30 : (mode === 'piste' ? 8 : 3);
+      const curW = mode === 'route' ? CURRENT_ROUTE_WIDTH : (mode === 'piste' ? CURRENT_PISTE_WIDTH : CURRENT_PIETON_WIDTH);
+      const val = prompt(`Saisir la largeur en mètres pour ${mode} (entre ${minW}m et ${maxW}m) :`, curW);
+      if (val !== null) {
+        const num = parseFloat(val);
+        if (!isNaN(num) && num > 0) setTrackWidth(mode, num);
+      }
+    });
+  }
+
+  ['route', 'piste', 'piste_pieton'].forEach(tType => {
+    const bId = (tType === 'piste_pieton') ? 'tool-piste-pieton' : ('tool-' + tType);
+    const bEl = document.getElementById(bId);
+    if (bEl) {
+      bEl.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        const minW = tType === 'route' ? 8 : (tType === 'piste' ? 2 : 1);
+        const maxW = tType === 'route' ? 30 : (tType === 'piste' ? 8 : 3);
+        const curW = tType === 'route' ? CURRENT_ROUTE_WIDTH : (tType === 'piste' ? CURRENT_PISTE_WIDTH : CURRENT_PIETON_WIDTH);
+        const val = prompt(`Modifier la largeur par défaut pour ${tType} (entre ${minW}m et ${maxW}m) :`, curW);
+        if (val !== null) {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num > 0) setTrackWidth(tType, num);
+        }
+      });
+    }
+  });
+
   document.getElementById('tool-line').addEventListener('click',    function() { toggleTool('line'); });
   document.getElementById('tool-bt').addEventListener('click',      function() { toggleTool('bt'); });
   document.getElementById('tool-btExt').addEventListener('click',   function() { toggleTool('btExt'); });
@@ -314,7 +376,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.target === this) this.classList.add('hidden');
   });
 
-  document.getElementById('color-line').addEventListener('input',    function() { STYLES.lineColor = this.value; });
+  document.getElementById('color-line').addEventListener('input',    function() { STYLES.lineColor = this.value; STYLES.pisteColor = this.value; });
+  const colPieton = document.getElementById('color-pieton');
+  if (colPieton) colPieton.addEventListener('input', function() { STYLES.pistePietonColor = this.value; });
+  const colRoute = document.getElementById('color-route');
+  if (colRoute) colRoute.addEventListener('input', function() { STYLES.routeColor = this.value; });
+
+  const setRouteW = document.getElementById('setting-route-width');
+  if (setRouteW) setRouteW.addEventListener('input', function() { setTrackWidth('route', this.value); });
+  const setPisteW = document.getElementById('setting-piste-width');
+  if (setPisteW) setPisteW.addEventListener('input', function() { setTrackWidth('piste', this.value); });
+  const setPietonW = document.getElementById('setting-pieton-width');
+  if (setPietonW) setPietonW.addEventListener('input', function() { setTrackWidth('piste_pieton', this.value); });
+
   document.getElementById('color-point').addEventListener('input',   function() { STYLES.pointColor = this.value; });
   document.getElementById('color-polygon').addEventListener('input', function() { STYLES.polygonColor = this.value; });
   document.getElementById('line-weight').addEventListener('input', function() {
@@ -413,6 +487,7 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'x': case 'X': toggleTool('coord'); break;
       case 'r': case 'R': toggleTool('route'); break;
       case 't': case 'T': toggleTool('piste'); break;
+      case 'w': case 'W': toggleTool('piste_pieton'); break;
       case 'l': case 'L': toggleTool('line'); break;
       case 'b': case 'B': toggleTool('bt'); break;
       case 'e': case 'E': toggleTool('btExt'); break;
@@ -425,7 +500,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  setStatus('Bienvenue ! Outils: Foyer(P), Route(R), Piste(T), Ligne(L), BT Neuf(B), BT Exist(E), Polygone(G).');
+  if (typeof updateWidthUI === 'function') updateWidthUI();
+
+  setStatus('Bienvenue ! Voies: Route(R), Piste(T), Piétons(W) | Réseau: BT(B), Exist(E) | Poteaux: PBA/Acier.');
   goToCountry('MA');
 });
 

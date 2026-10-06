@@ -167,10 +167,24 @@ body {
 .tool-foyer.active, .tool-foyer:hover { background: #c0392b !important; }
 .tool-piste { border-left: 3px solid #f39c12 !important; }
 .tool-piste.active, .tool-piste:hover { background: #d68910 !important; }
+.tool-piste-pieton { border-left: 3px solid #8e44ad !important; }
+.tool-piste-pieton.active, .tool-piste-pieton:hover { background: #7d3c98 !important; }
 .tool-route { border-left: 3px solid #27ae60 !important; }
 .tool-route.active, .tool-route:hover { background: #1e8449 !important; }
 .tool-line { border-left: 3px solid #3a86ff !important; }
 .tool-line.active, .tool-line:hover { background: #2e74c0 !important; }
+.tool-subbadge {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.4);
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin-top: 1px;
+  line-height: 1;
+  letter-spacing: 0.2px;
+}
 .tool-pba { border-left: 3px solid #111111 !important; }
 .tool-pba.active, .tool-pba:hover { background: #111111 !important; color: #fff !important; }
 .tool-acier { border-left: 3px solid #555555 !important; }
@@ -712,6 +726,35 @@ body {
 .dxf-quick-select:hover, .dxf-quick-select:focus {
   border-color: #e67e22;
   box-shadow: 0 0 3px rgba(230,126,34,0.4);
+}
+
+/* ── ROAD WIDTH QUICK BAR ── */
+.road-width-quick-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  font-size: 11px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.road-width-label {
+  font-weight: 700;
+  color: #27ae60;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.road-width-label.mode-piste {
+  color: #e67e22;
+}
+.road-width-label.mode-pieton {
+  color: #8e44ad;
 }
 
 /* ── HUD MESURE EN DIRECT (LIVE TRACE DISTANCE) ── */

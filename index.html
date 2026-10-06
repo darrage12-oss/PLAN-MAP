@@ -143,6 +143,13 @@
           <option value="10">10.0 m</option>
         </select>
       </div>
+      <div class="road-width-quick-bar" id="road-width-bar" title="Largeur des voies (Route: 8-30m, Piste: 2-8m, Piétons: 1-2m)">
+        <span class="road-width-label" id="road-width-label"><i class="fa fa-arrows-left-right"></i> <span id="road-width-mode">Largeur</span>:</span>
+        <select id="sel-road-width" class="dxf-quick-select" title="Choisir la largeur en mètres"></select>
+        <button id="btn-custom-road-width" class="view-btn" style="padding: 2px 7px; font-size: 11px; margin-left: 2px; height: 24px; line-height: 20px;" title="Saisir une largeur personnalisée en mètres">
+          <i class="fa fa-pen"></i>
+        </button>
+      </div>
     </div>
     
     <!-- LEFT SIDEBAR FOR IMPORTED POINTS -->
@@ -237,17 +244,25 @@
         </button>
       </div>
 
-      <!-- LINES -->
+      <!-- VOIES & PISTES -->
+      <div class="toolbar-label">VOIES & PISTES</div>
       <div class="toolbar-section">
-        <button class="tool-btn tool-piste" id="tool-piste" title="Dessiner une piste (trait orange pointille)">
-          <i class="fa fa-person-hiking"></i>
-          <span class="btn-badge">Piste</span>
-        </button>
-        <button class="tool-btn tool-route" id="tool-route" title="Dessiner une route (trait vert plein)">
+        <button class="tool-btn tool-route" id="tool-route" title="Dessiner une Route (2 traits pleins - Largeur 8m à 30m)">
           <i class="fa fa-road"></i>
           <span class="btn-badge">Route</span>
+          <span class="tool-subbadge" id="badge-route-w">10m</span>
         </button>
-        <button class="tool-btn tool-line" id="tool-line" title="Dessiner une ligne generique">
+        <button class="tool-btn tool-piste" id="tool-piste" title="Dessiner une Piste carrossable (2 traits tiretés - Largeur 2m à 8m)">
+          <i class="fa fa-person-hiking"></i>
+          <span class="btn-badge">Piste</span>
+          <span class="tool-subbadge" id="badge-piste-w">4m</span>
+        </button>
+        <button class="tool-btn tool-piste-pieton" id="tool-piste-pieton" title="Dessiner une Piste Piétons / Sentier (2 traits pointillés - Largeur 1m à 2m)">
+          <i class="fa fa-person-walking"></i>
+          <span class="btn-badge">Piétons</span>
+          <span class="tool-subbadge" id="badge-pieton-w">1.5m</span>
+        </button>
+        <button class="tool-btn tool-line" id="tool-line" title="Dessiner une ligne générique">
           <i class="fa fa-pen"></i>
           <span class="btn-badge">Ligne</span>
         </button>
@@ -346,6 +361,29 @@
         <div class="setting-group">
           <label>Couleur des pistes :</label>
           <input type="color" id="color-line" value="#FF6600" />
+        </div>
+        <div class="setting-group">
+          <label>Couleur piste piétons :</label>
+          <input type="color" id="color-pieton" value="#8e44ad" />
+        </div>
+        <div class="setting-group">
+          <label>Couleur des routes :</label>
+          <input type="color" id="color-route" value="#27ae60" />
+        </div>
+        <div class="setting-group">
+          <label>Largeur Route (8m à 30m) :</label>
+          <input type="number" id="setting-route-width" min="8" max="30" step="0.5" value="10" style="width:70px;padding:3px;" />
+          <span style="font-size:12px;color:#666;">m</span>
+        </div>
+        <div class="setting-group">
+          <label>Largeur Piste (2m à 8m) :</label>
+          <input type="number" id="setting-piste-width" min="2" max="8" step="0.5" value="4" style="width:70px;padding:3px;" />
+          <span style="font-size:12px;color:#666;">m</span>
+        </div>
+        <div class="setting-group">
+          <label>Largeur Piste Piétons (1m à 2m) :</label>
+          <input type="number" id="setting-pieton-width" min="1" max="3" step="0.1" value="1.5" style="width:70px;padding:3px;" />
+          <span style="font-size:12px;color:#666;">m</span>
         </div>
         <div class="setting-group">
           <label>Couleur des foyers :</label>
