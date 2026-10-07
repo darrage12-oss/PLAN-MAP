@@ -504,12 +504,39 @@ function importDXF(text) {
 
   texts.forEach(txt => {
     let bestDist = Infinity, bestPt = null;
+    
+    // Chercher le point le plus proche
     points.forEach(pt => {
       const d = approxDistMeters(txt, pt);
       if (d < bestDist) { bestDist = d; bestPt = pt; }
     });
-    if (bestPt && bestDist < 50) {
-      bestPt.name = bestPt.name ? bestPt.name + '\n' + txt.value : txt.value;
+    
+    // Chercher aussi parmi les cercles (certains supports sont dessinés comme des cercles)
+    let bestCircle = null;
+    circles.forEach(c => {
+      const d = approxDistMeters(txt, c);
+      if (d < bestDist) { bestDist = d; bestPt = null; bestCircle = c; }
+    });
+
+    if (bestDist < 50) {
+      if (bestPt) {
+        bestPt.name = bestPt.name ? bestPt.name + '\n' + txt.value : txt.value;
+        txt._matched = true;
+      } else if (bestCircle) {
+        // Convertir le cercle en point (support)
+        const newPt = { x: bestCircle.x, y: bestCircle.y, layer: bestCircle.layer || '', name: txt.value };
+        points.push(newPt);
+        // Retirer le cercle des cercles à dessiner pour éviter les doublons
+        circles = circles.filter(ci => ci !== bestCircle);
+        txt._matched = true;
+      }
+    } else {
+      // Si aucun point/cercle n'est trouvé, mais que le texte est dans une couche de support, forcer sa création en tant que support
+      const l = (txt.layer || '').toUpperCase();
+      if (l.includes('NOMS_SUPPORTS') || l.includes('NUMEROS_SUPPORTS')) {
+        points.push({ x: txt.x, y: txt.y, layer: txt.layer, name: txt.value });
+        txt._matched = true;
+      }
     }
   });
 
@@ -646,6 +673,7 @@ function importDXF(text) {
 
   /* ── Ajouter les TEXT orphelins (pas encore associés à un point) ── */
   texts.forEach((txt, idx) => {
+    if (txt._matched) return;
     const wgs = toWGS84(txt.x, txt.y, epsg);
     if (!wgs) return;
 
@@ -1055,6 +1083,7 @@ function refreshPointsList() {
     if (!ll) return;
     const proj = latlon2proj(ll.lat, ll.lng, epsg);
     const xVal = proj ? proj.x.toFixed(3) : '--';
+    const yVal = proj ? proj.y.toFixed(3) : '--';
     let displayName = layer._elementName || 'Support #' + (idx + 1);
     if (typeof splitSupportNameLines === 'function') {
       const parts = splitSupportNameLines(displayName);

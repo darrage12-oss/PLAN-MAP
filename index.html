@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="css/style.css?v=10" />
+  <link rel="stylesheet" href="css/style.css?v=50" />
 </head>
 <body>
 
@@ -113,9 +113,9 @@
       <button class="view-btn" id="btn-toggle-points-sidebar" title="Afficher ou masquer la liste des points">
         <i class="fa fa-list"></i> Points <span id="points-count-badge" style="background:#27ae60;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;display:none;">0</span>
       </button>
-      <button class="view-btn" id="btn-rotate-left" title="Tourner la carte à gauche (⟲ 45°)"><i class="fa fa-undo"></i> ⟲</button>
-      <button class="view-btn" id="btn-rotate-right" title="Tourner la carte à droite (⟳ 45°)"><i class="fa fa-redo"></i> ⟳</button>
-      <button class="view-btn" id="btn-rotate-reset" title="Réinitialiser au Nord (0°)" style="font-weight:bold;color:#e74c3c;"><i class="fa fa-compass"></i> Nord</button>
+      <button class="view-btn" id="btn-rotate-left" title="Tourner la carte a gauche (-45&deg;)"><i class="fa fa-undo"></i> -45&deg;</button>
+      <button class="view-btn" id="btn-rotate-right" title="Tourner la carte a droite (+45&deg;)"><i class="fa fa-redo"></i> +45&deg;</button>
+      <button class="view-btn" id="btn-rotate-reset" title="Reinitialiser au Nord (0&deg;)" style="font-weight:bold;color:#e74c3c;"><i class="fa fa-compass"></i> Nord</button>
       <div class="dxf-quick-bar" title="Options pour l'export AutoCAD (Nom du support, X=, Y=)">
         <span class="dxf-quick-label"><i class="fa fa-file-invoice"></i> DXF:</span>
         <select id="top-dxf-font" class="dxf-quick-select" title="Police d'export (Nom, X, Y)">
@@ -471,13 +471,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="js/coordinates.js?v=2"></script>
-  <script src="js/map.js?v=2"></script>
-  <script src="js/draw.js?v=16"></script>
-  <script src="js/import.js?v=24"></script>
-  <script src="js/export-kml.js?v=6"></script>
-  <script src="js/export-dxf.js?v=33"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/coordinates.js?v=50"></script>
+  <script src="js/map.js?v=50"></script>
+  <script src="js/draw.js?v=50"></script>
+  <script src="js/import.js?v=50"></script>
+  <script src="js/export-kml.js?v=50"></script>
+  <script src="js/export-dxf.js?v=50"></script>
+  <script src="js/app.js?v=50"></script>
 </body>
 </html>
 

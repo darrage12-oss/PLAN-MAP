@@ -277,8 +277,11 @@ function exportDXF() {
       const nomRaw = layer._elementName || layer._customTitle || '';
 
       /* ── TRAITEMENT DU NOM : préserver les sauts de ligne \n avant tout nettoyage ── */
-      // Étape 1 : découper sur les vrais sauts de ligne (tapés par l'utilisateur avec Entrée)
-      const rawLines = String(nomRaw).split(/\r?\n/);
+      // Remplacer les <br> par des sauts de ligne, au cas où le texte vient d'un KML ou d'un import HTML
+      let rawText = String(nomRaw).replace(/<br\s*\/?>/gi, '\n');
+      
+      // Étape 1 : découper sur les vrais sauts de ligne
+      const rawLines = rawText.split(/\r?\n/);
       // Étape 2 : nettoyer chaque ligne individuellement (garder lettres accentuées + espace + chiffres + ponctuation)
       const cleanedLines = rawLines
         .map(l => l.replace(/[\x00-\x1F\x7F]/g, '').trim())  // supprimer seulement les caractères de contrôle
@@ -375,8 +378,8 @@ function exportDXF() {
         // pour ne laisser que le numéro "N°1" seulement, plus d'éventuelles annotations manuelles
         nameLines = nameLines.filter(line => {
           const l = line.trim();
-          if (/^(N°|#|\bN\b|\bN\d+)\s*\d*/i.test(l)) return false;
-          if (/^(?:(?:PBA|ACIER)\s+)?(?:MT|BT|BTMT|Support|Element)\s*#?\d+$/i.test(l)) return false;
+          if (/^(?:N[°\.]?|#|\bN\b|\bN\d+)\s*\d*\s*$/i.test(l)) return false;
+          if (/^(?:(?:PBA|ACIER)\s+)?(?:MT|BT|BTMT|Support|Element)\s*#?\d+\s*$/i.test(l)) return false;
           return true;
         });
 
